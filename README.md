@@ -1,16 +1,85 @@
-# React + Vite
+# Exam Seating System - Web Version
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+![Figure](figure.png)
+A modern, browser-based exam seating arrangement system built with React. Generate randomized seating charts with support for custom classroom layouts, CSV student imports, and PDF exports—all running entirely in your browser with no backend required.
 
-Currently, two official plugins are available:
+🌐 **[Seating System Web](https://jameslin102.github.io/Seating-System-Web/)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ Features
 
-## React Compiler
+### 🏫 Flexible Classroom Configuration
+- Define custom classroom dimensions (M × N grid)
+- Visual stage/platform indicator at the front
+- Click to enable/disable specific seats to match actual classroom layouts
+- Save and load classroom configurations (JSON format)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 👥 Student Management
+- Import student lists from CSV files
+- Interactive column selector for flexible CSV formats
+- Supports UTF-8 encoding
+- Real-time student count display
 
-## Expanding the ESLint configuration
+### 🎲 Smart Seating Arrangement
+- One-click random seat assignment
+- Visual color-coded seat status:
+  - 🟢 **Green**: Available seats
+  - 🩷 **Pink**: Disabled seats
+  - 🔵 **Blue**: Assigned seats
+- Easy clearing and rearrangement
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 📄 PDF Export
+- High-quality PDF generation with full Chinese character support
+- Professional seating chart layout
+- Landscape A4 format optimized for printing
+- Preserves all visual styling and colors
+
+### 💾 Browser Storage
+- All processing happens locally in your browser
+- No data is sent to any server
+- Privacy-focused design
+
+## 📖 User Guide
+
+### Step 1: Configure Classroom
+1. Enter the number of rows (M) and columns (N)
+2. Click "Set Classroom Size"
+3. Click on seats to disable them (to match your classroom layout)
+4. (Optional) Save the configuration for future use
+
+### Step 2: Import Students
+1. Click "Load Student List"
+2. Select your CSV file
+3. Choose the column containing student names
+4. Confirm to load the student list
+
+### Step 3: Arrange Seats
+1. Click "Random Arrangement" to automatically assign students
+2. Review the arrangement on the visual seating chart
+3. Use "Clear Arrangement" to start over if needed
+
+### Step 4: Export
+1. Click "Export to PDF"
+2. Save the seating chart for distribution or printing
+
+## 📁 CSV File Format
+
+Your CSV file can have any structure. The application will prompt you to select which column contains student names.
+
+**Example CSV:**
+```csv
+Student ID,Name,Class,Grade
+001,Offer Yang,A,10
+002,Uploader Li,B,10
+003,Director Wang,A,10
+004,ComedyGod Lin,A,10
+005,FriedFish Chiu,B,10
+```
+
+Just select the "Name" column when prompted.
+
+## 🐍 Python Desktop Version
+
+This project also has a Python desktop version with GUI:
+- **Repository**: https://github.com/JamesLin102/Seating-System.git
+- Features PDF export with Chinese font support
+- Ideal for offline use
