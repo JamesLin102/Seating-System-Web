@@ -4,6 +4,8 @@ import { Camera, Upload, Download, Grid, Users, FileDown, Trash2, Shuffle, Menu,
 const ExamSeatingSystem = () => {
   const [rows, setRows] = useState(6);
   const [cols, setCols] = useState(8);
+  const [rowsInput, setRowsInput] = useState('6');
+  const [colsInput, setColsInput] = useState('8');
   const [disabledSeats, setDisabledSeats] = useState(new Set());
   const [students, setStudents] = useState([]);
   const [seatingArrangement, setSeatingArrangement] = useState({});
@@ -19,27 +21,38 @@ const ExamSeatingSystem = () => {
     setDarkMode(savedDarkMode);
     if (savedDarkMode) {
       document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
   }, []);
+
+  // Sync input values with state
+  useEffect(() => {
+    setRowsInput(String(rows));
+    setColsInput(String(cols));
+  }, [rows, cols]);
 
   // Toggle dark mode
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
-    localStorage.setItem('darkMode', newDarkMode);
+    localStorage.setItem('darkMode', String(newDarkMode));
+    
     if (newDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
+    
+    console.log('Dark mode toggled:', newDarkMode); // Debug log
   };
 
   // Set classroom size
   const handleSetClassroom = () => {
-    const newRows = parseInt(document.getElementById('rows-input').value);
-    const newCols = parseInt(document.getElementById('cols-input').value);
+    const newRows = parseInt(rowsInput);
+    const newCols = parseInt(colsInput);
     
-    if (newRows < 1 || newRows > 20 || newCols < 1 || newCols > 20) {
+    if (isNaN(newRows) || isNaN(newCols) || newRows < 1 || newRows > 20 || newCols < 1 || newCols > 20) {
       alert('Rows and columns must be between 1-20');
       return;
     }
@@ -189,6 +202,8 @@ const ExamSeatingSystem = () => {
           const config = JSON.parse(event.target.result);
           setRows(config.rows);
           setCols(config.cols);
+          setRowsInput(String(config.rows));
+          setColsInput(String(config.cols));
           setDisabledSeats(new Set(config.disabledSeats));
           setSeatingArrangement({});
           setMobileMenuOpen(false);
@@ -202,7 +217,7 @@ const ExamSeatingSystem = () => {
     input.click();
   };
 
-  // Export to PDF
+  // Export to PDF with embedded Chinese font
   const exportPDF = async () => {
     if (Object.keys(seatingArrangement).length === 0) {
       alert('Please arrange seats first');
@@ -210,51 +225,127 @@ const ExamSeatingSystem = () => {
     }
 
     try {
-      const html2canvas = (await import('html2canvas')).default;
+      setMobileMenuOpen(false);
+      
       const { jsPDF } = await import('jspdf');
-
-      // Find the inner seating chart content (white box with stage and seats)
-      const seatingChartContent = document.querySelector('.seating-chart-content');
       
-      if (!seatingChartContent) {
-        alert('Cannot find seating chart element');
-        return;
-      }
-
-      // Convert seating chart to canvas
-      const canvas = await html2canvas(seatingChartContent, {
-        scale: 3, // Higher quality
-        backgroundColor: '#ffffff',
-        logging: false,
-        useCORS: true,
-        windowWidth: seatingChartContent.scrollWidth,
-        windowHeight: seatingChartContent.scrollHeight
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      
-      // A4 landscape dimensions
       const doc = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       });
 
+      // Load Chinese font from public folder
+      try {
+        const fontPath = `${import.meta.env.BASE_URL}NotoSansTC-Regular.ttf`;
+        const response = await fetch(fontPath);
+        
+        if (!response.ok) {
+          throw new Error('Font file not found');
+        }
+        
+        const fontArrayBuffer = await response.arrayBuffer();
+        const fontBase64 = btoa(
+          new Uint8Array(fontArrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+        
+        // Add font to jsPDF
+        doc.addFileToVFS('NotoSansTC-Regular.ttf', fontBase64);
+        doc.addFont('NotoSansTC-Regular.ttf', 'NotoSansTC', 'normal');
+        doc.setFont('NotoSansTC');
+      } catch (fontError) {
+        console.error('Failed to load font:', fontError);
+        alert('Warning: Chinese font not loaded. PDF may not display Chinese characters correctly.');
+        doc.setFont('helvetica');
+      }
+
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      
-      // Calculate dimensions to fit the page
-      const imgWidth = pageWidth - 20; // 10mm margin on each side
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      const xOffset = 10;
-      const yOffset = (pageHeight - imgHeight) / 2;
 
-      doc.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
+      // Title
+      doc.setFontSize(24);
+      doc.text('Exam Seating Chart', pageWidth / 2, 20, { align: 'center' });
+
+      // Stage
+      const stageY = 35;
+      const stageHeight = 15;
+      doc.setFillColor(210, 180, 140); // Tan - light brown
+      doc.rect(20, stageY, pageWidth - 40, stageHeight, 'F');
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.rect(20, stageY, pageWidth - 40, stageHeight, 'S');
+      doc.setFontSize(14);
+      doc.setTextColor(0, 0, 0);
+      doc.text('STAGE', pageWidth / 2, stageY + 10, { align: 'center' });
+
+      // Calculate seat dimensions
+      const margin = 20;
+      const startY = stageY + stageHeight + 15;
+      const availableWidth = pageWidth - (margin * 2);
+      const availableHeight = pageHeight - startY - margin;
+      
+      const seatWidth = Math.min(availableWidth / cols, 35);
+      const seatHeight = Math.min(availableHeight / rows, 25);
+      
+      const gridWidth = seatWidth * cols;
+      const startX = (pageWidth - gridWidth) / 2;
+
+      // Draw seats
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
+      
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const seatId = `${row},${col}`;
+          
+          if (disabledSeats.has(seatId)) {
+            continue;
+          }
+          
+          const x = startX + col * seatWidth;
+          const y = startY + row * seatHeight;
+          
+          // Determine color
+          if (seatingArrangement[seatId]) {
+            doc.setFillColor(135, 206, 235); // Blue
+          } else {
+            doc.setFillColor(144, 238, 144); // Green
+          }
+          
+          // Draw rectangle with border
+          doc.setLineWidth(0.3);
+          doc.setDrawColor(100, 100, 100);
+          doc.rect(x, y, seatWidth - 1, seatHeight - 1, 'FD');
+          
+          // Draw text - properly centered
+          const text = seatingArrangement[seatId] || `R${row + 1}C${col + 1}`;
+          
+          // Calculate text position for proper centering
+          const textX = x + (seatWidth - 1) / 2;
+          const textY = y + (seatHeight - 1) / 2 + 1.5; // Adjusted for better vertical centering
+          
+          doc.text(text, textX, textY, { 
+            align: 'center',
+            baseline: 'middle',
+            maxWidth: seatWidth - 4
+          });
+        }
+      }
+
+      // Add footer
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      const date = new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit' 
+      });
+      doc.text(`Generated: ${date}`, pageWidth - 15, pageHeight - 5, { align: 'right' });
+
       doc.save('seating_chart.pdf');
-      setMobileMenuOpen(false);
       alert('PDF exported successfully!');
     } catch (error) {
+      console.error('Export error:', error);
       alert('Error exporting PDF: ' + error.message);
     }
   };
@@ -300,9 +391,9 @@ const ExamSeatingSystem = () => {
           <div className="flex-1">
             <label className="text-xs md:text-sm text-gray-600 dark:text-gray-300">Rows (M)</label>
             <input
-              id="rows-input"
               type="number"
-              defaultValue={rows}
+              value={rowsInput}
+              onChange={(e) => setRowsInput(e.target.value)}
               className="w-full border dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               min="1"
               max="20"
@@ -311,9 +402,9 @@ const ExamSeatingSystem = () => {
           <div className="flex-1">
             <label className="text-xs md:text-sm text-gray-600 dark:text-gray-300">Cols (N)</label>
             <input
-              id="cols-input"
               type="number"
-              defaultValue={cols}
+              value={colsInput}
+              onChange={(e) => setColsInput(e.target.value)}
               className="w-full border dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               min="1"
               max="20"
@@ -466,7 +557,7 @@ const ExamSeatingSystem = () => {
             <div
               className="grid gap-1 md:gap-2"
               style={{
-                gridTemplateColumns: `repeat(${cols}, minmax(40px, 60px))`,
+                gridTemplateColumns: `repeat(${cols}, minmax(60px, 80px))`,
               }}
             >
               {Array.from({ length: rows }, (_, row) =>
@@ -478,10 +569,9 @@ const ExamSeatingSystem = () => {
                       getSeatColor(row, col) === 'bg-green-200' ? 'dark:bg-green-700' :
                       getSeatColor(row, col) === 'bg-pink-200' ? 'dark:bg-pink-700' :
                       'dark:bg-blue-700'
-                    } border-2 border-gray-400 dark:border-gray-500 rounded p-1 md:p-2 h-10 md:h-14 flex items-center justify-center text-[10px] md:text-xs font-medium hover:opacity-80 transition-opacity text-gray-900 dark:text-white`}
-                    style={{ fontSize: cols > 10 ? '8px' : undefined }}
+                    } border-2 border-gray-400 dark:border-gray-500 rounded px-1 py-2 md:px-2 md:py-3 min-h-[50px] md:min-h-[60px] flex items-center justify-center text-xs md:text-sm font-medium hover:opacity-80 transition-opacity text-gray-900 dark:text-white leading-tight`}
                   >
-                    <span className="truncate w-full text-center">
+                    <span className="text-center w-full leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
                       {getSeatText(row, col)}
                     </span>
                   </button>
