@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist --repo=https://github.com/JamesLin102/Seating-System-Web.git --branch=gh-pages"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",
