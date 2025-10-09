@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Camera, Upload, Download, Grid, Users, FileDown, Trash2, Shuffle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Camera, Upload, Download, Grid, Users, FileDown, Trash2, Shuffle, Menu, X, Moon, Sun } from 'lucide-react';
 
 const ExamSeatingSystem = () => {
   const [rows, setRows] = useState(6);
@@ -9,7 +9,30 @@ const ExamSeatingSystem = () => {
   const [seatingArrangement, setSeatingArrangement] = useState({});
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [csvData, setCsvData] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Initialize dark mode from localStorage
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(savedDarkMode);
+    if (savedDarkMode) {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    localStorage.setItem('darkMode', newDarkMode);
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   // Set classroom size
   const handleSetClassroom = () => {
@@ -25,6 +48,7 @@ const ExamSeatingSystem = () => {
     setCols(newCols);
     setDisabledSeats(new Set());
     setSeatingArrangement({});
+    setMobileMenuOpen(false);
     alert(`Classroom size set to ${newRows} × ${newCols}`);
   };
 
@@ -89,6 +113,7 @@ const ExamSeatingSystem = () => {
     
     setStudents(studentList);
     setShowColumnSelector(false);
+    setMobileMenuOpen(false);
     alert(`Successfully loaded ${studentList.length} students`);
   };
 
@@ -121,12 +146,14 @@ const ExamSeatingSystem = () => {
     });
 
     setSeatingArrangement(newArrangement);
+    setMobileMenuOpen(false);
     alert('Seating arrangement completed');
   };
 
   // Clear arrangement
   const clearArrangement = () => {
     setSeatingArrangement({});
+    setMobileMenuOpen(false);
   };
 
   // Save classroom configuration
@@ -144,6 +171,7 @@ const ExamSeatingSystem = () => {
     a.download = 'classroom_config.json';
     a.click();
     URL.revokeObjectURL(url);
+    setMobileMenuOpen(false);
   };
 
   // Load classroom configuration
@@ -163,6 +191,7 @@ const ExamSeatingSystem = () => {
           setCols(config.cols);
           setDisabledSeats(new Set(config.disabledSeats));
           setSeatingArrangement({});
+          setMobileMenuOpen(false);
           alert('Classroom configuration loaded');
         } catch (error) {
           alert('Invalid configuration file');
@@ -223,6 +252,7 @@ const ExamSeatingSystem = () => {
 
       doc.addImage(imgData, 'PNG', xOffset, yOffset, imgWidth, imgHeight);
       doc.save('seating_chart.pdf');
+      setMobileMenuOpen(false);
       alert('PDF exported successfully!');
     } catch (error) {
       alert('Error exporting PDF: ' + error.message);
@@ -244,163 +274,199 @@ const ExamSeatingSystem = () => {
     return `R${row+1}C${col+1}`;
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Control Panel */}
-      <div className="w-80 bg-white shadow-lg p-6 overflow-y-auto">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+  // Control Panel Component
+  const ControlPanel = () => (
+    <div className="bg-white dark:bg-gray-800 shadow-lg p-4 md:p-6 overflow-y-auto h-full">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white text-center flex-1">
           Exam Seating System
         </h1>
+        <button
+          onClick={toggleDarkMode}
+          className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {darkMode ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-gray-700" />}
+        </button>
+      </div>
 
-        {/* Classroom Settings */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <Grid size={20} />
-            Classroom Settings
-          </h2>
-          <div className="flex gap-2 mb-2">
-            <div className="flex-1">
-              <label className="text-sm text-gray-600">Rows (M)</label>
-              <input
-                id="rows-input"
-                type="number"
-                defaultValue={rows}
-                className="w-full border rounded px-2 py-1"
-                min="1"
-                max="20"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="text-sm text-gray-600">Cols (N)</label>
-              <input
-                id="cols-input"
-                type="number"
-                defaultValue={cols}
-                className="w-full border rounded px-2 py-1"
-                min="1"
-                max="20"
-              />
-            </div>
+      {/* Classroom Settings */}
+      <div className="mb-4 md:mb-6">
+        <h2 className="text-base md:text-lg font-semibold mb-3 flex items-center gap-2 text-gray-800 dark:text-white">
+          <Grid size={18} />
+          Classroom Settings
+        </h2>
+        <div className="flex gap-2 mb-2">
+          <div className="flex-1">
+            <label className="text-xs md:text-sm text-gray-600 dark:text-gray-300">Rows (M)</label>
+            <input
+              id="rows-input"
+              type="number"
+              defaultValue={rows}
+              className="w-full border dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              min="1"
+              max="20"
+            />
           </div>
-          <button
-            onClick={handleSetClassroom}
-            className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 font-medium"
-          >
-            Set Classroom Size
-          </button>
-          <p className="text-xs text-gray-500 italic mt-2 text-center">
-            Click seats to enable/disable
-          </p>
+          <div className="flex-1">
+            <label className="text-xs md:text-sm text-gray-600 dark:text-gray-300">Cols (N)</label>
+            <input
+              id="cols-input"
+              type="number"
+              defaultValue={cols}
+              className="w-full border dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              min="1"
+              max="20"
+            />
+          </div>
         </div>
+        <button
+          onClick={handleSetClassroom}
+          className="w-full bg-green-600 dark:bg-green-700 text-white py-2 rounded hover:bg-green-700 dark:hover:bg-green-600 font-medium text-sm md:text-base"
+        >
+          Set Classroom Size
+        </button>
+        <p className="text-xs text-gray-500 dark:text-gray-400 italic mt-2 text-center">
+          Click seats to enable/disable
+        </p>
+      </div>
 
-        {/* Classroom Management */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">Classroom Management</h2>
-          <button
-            onClick={saveClassroom}
-            className="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700 mb-2 flex items-center justify-center gap-2"
-          >
-            <Download size={18} />
-            Save Classroom
-          </button>
-          <button
-            onClick={loadClassroom}
-            className="w-full bg-purple-700 text-white py-2 rounded hover:bg-purple-800 flex items-center justify-center gap-2"
-          >
-            <Upload size={18} />
-            Load Classroom
-          </button>
-        </div>
+      {/* Classroom Management */}
+      <div className="mb-4 md:mb-6">
+        <h2 className="text-base md:text-lg font-semibold mb-3 text-gray-800 dark:text-white">Classroom Management</h2>
+        <button
+          onClick={saveClassroom}
+          className="w-full bg-purple-600 dark:bg-purple-700 text-white py-2 rounded hover:bg-purple-700 dark:hover:bg-purple-600 mb-2 flex items-center justify-center gap-2 text-sm md:text-base"
+        >
+          <Download size={16} />
+          Save Classroom
+        </button>
+        <button
+          onClick={loadClassroom}
+          className="w-full bg-purple-700 dark:bg-purple-800 text-white py-2 rounded hover:bg-purple-800 dark:hover:bg-purple-700 flex items-center justify-center gap-2 text-sm md:text-base"
+        >
+          <Upload size={16} />
+          Load Classroom
+        </button>
+      </div>
 
-        {/* Student Information */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <Users size={20} />
-            Student Information
-          </h2>
-          <p className="text-sm text-gray-600 mb-2">
-            Students Loaded: {students.length}
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 flex items-center justify-center gap-2"
-          >
-            📋 Load Student List
-          </button>
-        </div>
+      {/* Student Information */}
+      <div className="mb-4 md:mb-6">
+        <h2 className="text-base md:text-lg font-semibold mb-3 flex items-center gap-2 text-gray-800 dark:text-white">
+          <Users size={18} />
+          Student Information
+        </h2>
+        <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 mb-2">
+          Students Loaded: {students.length}
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full bg-blue-600 dark:bg-blue-700 text-white py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 flex items-center justify-center gap-2 text-sm md:text-base"
+        >
+          📋 Load Student List
+        </button>
+      </div>
 
-        {/* Seating Arrangement */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">Seating Arrangement</h2>
-          <button
-            onClick={arrangeSeats}
-            className="w-full bg-orange-600 text-white py-2 rounded hover:bg-orange-700 mb-2 flex items-center justify-center gap-2 font-medium"
-          >
-            <Shuffle size={18} />
-            Random Arrangement
-          </button>
-          <button
-            onClick={clearArrangement}
-            className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 flex items-center justify-center gap-2"
-          >
-            <Trash2 size={18} />
-            Clear Arrangement
-          </button>
-        </div>
+      {/* Seating Arrangement */}
+      <div className="mb-4 md:mb-6">
+        <h2 className="text-base md:text-lg font-semibold mb-3 text-gray-800 dark:text-white">Seating Arrangement</h2>
+        <button
+          onClick={arrangeSeats}
+          className="w-full bg-orange-600 dark:bg-orange-700 text-white py-2 rounded hover:bg-orange-700 dark:hover:bg-orange-600 mb-2 flex items-center justify-center gap-2 font-medium text-sm md:text-base"
+        >
+          <Shuffle size={16} />
+          Random Arrangement
+        </button>
+        <button
+          onClick={clearArrangement}
+          className="w-full bg-red-600 dark:bg-red-700 text-white py-2 rounded hover:bg-red-700 dark:hover:bg-red-600 flex items-center justify-center gap-2 text-sm md:text-base"
+        >
+          <Trash2 size={16} />
+          Clear Arrangement
+        </button>
+      </div>
 
-        {/* Export */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">Export</h2>
-          <button
-            onClick={exportPDF}
-            className="w-full bg-pink-600 text-white py-2 rounded hover:bg-pink-700 flex items-center justify-center gap-2 font-bold"
-          >
-            <FileDown size={18} />
-            Export to PDF
-          </button>
-        </div>
+      {/* Export */}
+      <div className="mb-4 md:mb-6">
+        <h2 className="text-base md:text-lg font-semibold mb-3 text-gray-800 dark:text-white">Export</h2>
+        <button
+          onClick={exportPDF}
+          className="w-full bg-pink-600 dark:bg-pink-700 text-white py-2 rounded hover:bg-pink-700 dark:hover:bg-pink-600 flex items-center justify-center gap-2 font-bold text-sm md:text-base"
+        >
+          <FileDown size={16} />
+          Export to PDF
+        </button>
+      </div>
 
-        {/* Legend */}
-        <div>
-          <h2 className="text-lg font-semibold mb-3">Legend</h2>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-green-200 border border-gray-400"></div>
-              <span className="text-sm">Available</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-pink-200 border border-gray-400"></div>
-              <span className="text-sm">Disabled</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 bg-blue-200 border border-gray-400"></div>
-              <span className="text-sm">Assigned</span>
-            </div>
+      {/* Legend */}
+      <div>
+        <h2 className="text-base md:text-lg font-semibold mb-3 text-gray-800 dark:text-white">Legend</h2>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 md:w-6 md:h-6 bg-green-200 dark:bg-green-700 border border-gray-400 dark:border-gray-500"></div>
+            <span className="text-xs md:text-sm text-gray-800 dark:text-gray-200">Available</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 md:w-6 md:h-6 bg-pink-200 dark:bg-pink-700 border border-gray-400 dark:border-gray-500"></div>
+            <span className="text-xs md:text-sm text-gray-800 dark:text-gray-200">Disabled</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 md:w-6 md:h-6 bg-blue-200 dark:bg-blue-700 border border-gray-400 dark:border-gray-500"></div>
+            <span className="text-xs md:text-sm text-gray-800 dark:text-gray-200">Assigned</span>
           </div>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col md:flex-row">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 bg-blue-600 dark:bg-blue-700 text-white p-3 rounded-lg shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600"
+      >
+        {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      {/* Control Panel - Desktop */}
+      <div className="hidden md:block md:w-80 lg:w-96">
+        <ControlPanel />
+      </div>
+
+      {/* Control Panel - Mobile (Overlay) */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-40 bg-black bg-opacity-50" onClick={() => setMobileMenuOpen(false)}>
+          <div 
+            className="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ControlPanel />
+          </div>
+        </div>
+      )}
 
       {/* Seating Chart */}
-      <div className="flex-1 p-8">
-        <div className="bg-white rounded-lg shadow-lg p-6 h-full seating-chart-content">
+      <div className="flex-1 p-4 md:p-8 pt-20 md:pt-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 md:p-6 h-full seating-chart-content">
           {/* Stage */}
-          <div className="bg-yellow-100 border-2 border-yellow-600 rounded p-4 mb-6 text-center">
-            <h2 className="text-xl font-bold">STAGE</h2>
+          <div className="bg-yellow-100 dark:bg-yellow-900 border-2 border-yellow-600 dark:border-yellow-700 rounded p-2 md:p-4 mb-4 md:mb-6 text-center">
+            <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">STAGE</h2>
           </div>
 
           {/* Seats Grid */}
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center overflow-x-auto">
             <div
-              className="grid gap-2"
+              className="grid gap-1 md:gap-2"
               style={{
-                gridTemplateColumns: `repeat(${cols}, minmax(60px, 80px))`,
+                gridTemplateColumns: `repeat(${cols}, minmax(40px, 60px))`,
               }}
             >
               {Array.from({ length: rows }, (_, row) =>
@@ -408,9 +474,16 @@ const ExamSeatingSystem = () => {
                   <button
                     key={`${row}-${col}`}
                     onClick={() => toggleSeat(row, col)}
-                    className={`${getSeatColor(row, col)} border-2 border-gray-400 rounded p-2 h-14 flex items-center justify-center text-xs font-medium hover:opacity-80 transition-opacity`}
+                    className={`${getSeatColor(row, col)} ${
+                      getSeatColor(row, col) === 'bg-green-200' ? 'dark:bg-green-700' :
+                      getSeatColor(row, col) === 'bg-pink-200' ? 'dark:bg-pink-700' :
+                      'dark:bg-blue-700'
+                    } border-2 border-gray-400 dark:border-gray-500 rounded p-1 md:p-2 h-10 md:h-14 flex items-center justify-center text-[10px] md:text-xs font-medium hover:opacity-80 transition-opacity text-gray-900 dark:text-white`}
+                    style={{ fontSize: cols > 10 ? '8px' : undefined }}
                   >
-                    {getSeatText(row, col)}
+                    <span className="truncate w-full text-center">
+                      {getSeatText(row, col)}
+                    </span>
                   </button>
                 ))
               )}
@@ -421,10 +494,10 @@ const ExamSeatingSystem = () => {
 
       {/* Column Selector Modal */}
       {showColumnSelector && csvData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-h-96 overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">Select Student Name Column</h3>
-            <p className="text-sm text-gray-600 mb-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 md:p-6 w-full max-w-md max-h-96 overflow-y-auto">
+            <h3 className="text-lg md:text-xl font-bold mb-4 text-gray-900 dark:text-white">Select Student Name Column</h3>
+            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 mb-4">
               Please select the column containing student names:
             </p>
             <div className="space-y-2">
@@ -432,7 +505,7 @@ const ExamSeatingSystem = () => {
                 <button
                   key={header}
                   onClick={() => handleColumnSelect(header)}
-                  className="w-full text-left px-4 py-2 border rounded hover:bg-blue-50 hover:border-blue-500"
+                  className="w-full text-left px-3 md:px-4 py-2 border dark:border-gray-600 rounded hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-500 dark:hover:border-blue-400 text-sm md:text-base text-gray-900 dark:text-white"
                 >
                   {header}
                 </button>
@@ -440,7 +513,7 @@ const ExamSeatingSystem = () => {
             </div>
             <button
               onClick={() => setShowColumnSelector(false)}
-              className="w-full mt-4 bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+              className="w-full mt-4 bg-gray-500 dark:bg-gray-600 text-white py-2 rounded hover:bg-gray-600 dark:hover:bg-gray-500 text-sm md:text-base"
             >
               Cancel
             </button>
